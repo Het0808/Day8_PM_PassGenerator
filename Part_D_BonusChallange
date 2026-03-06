@@ -1,0 +1,188 @@
+# ============================================================
+#  Day-08 PM | PART D — Bonus Challenge
+#  Daily Transaction Analyzer — Paytm Case Study
+#  Topics: while loop, for loop, break, continue, dict, list
+# ============================================================
+
+
+# ════════════════════════════════════════════════════════════
+#  CONSTANTS
+# ════════════════════════════════════════════════════════════
+
+HIGH_VALUE_THRESHOLD = 10_000
+BAR_UNIT             = 1_000      # 1 star per ₹1000
+VALID_TYPES          = {"credit", "debit"}
+VALID_CATEGORIES     = {"food", "travel", "bills", "other"}
+
+
+# ════════════════════════════════════════════════════════════
+#  INPUT HELPERS
+# ════════════════════════════════════════════════════════════
+
+def get_float(prompt: str, lo: float = 0.01) -> float:
+    while True:
+        raw = input(prompt).strip().replace(",", "")
+        try:
+            val = float(raw)
+            if val >= lo:
+                return val
+            print(f"  ✗ Amount must be > 0.")
+        except ValueError:
+            print("  ✗ Enter a numeric value.")
+
+
+def get_choice(prompt: str, valid: set) -> str:
+    while True:
+        raw = input(prompt).strip().lower()
+        if raw in valid:
+            return raw
+        print(f"  ✗ Choose from: {' / '.join(sorted(valid))}")
+
+
+# ════════════════════════════════════════════════════════════
+#  BAR CHART PRINTER
+# ════════════════════════════════════════════════════════════
+
+def print_bar_chart(transactions: list) -> None:
+    """Print a bar chart of the last 10 transactions (* per ₹1000)."""
+    last10 = transactions[-10:]      # slice last 10
+
+    print("\n  [ Last 10 Transactions — Bar Chart ]")
+    print(f"  {'#':<4} {'Type':<8} {'Category':<10} {'Amount':>10}  Bar")
+    print("  " + "─" * 58)
+
+    for idx, txn in enumerate(last10, 1):        # for loop with enumerate
+        stars_count = max(1, int(txn["amount"] // BAR_UNIT))
+        bar = ""
+        for _ in range(stars_count):             # for loop: build bar
+            bar += "*"
+
+        hv_flag = " ⚠ HIGH VALUE" if txn["high_value"] else ""
+        sign    = "+" if txn["type"] == "credit" else "-"
+
+        print(
+            f"  {idx:<4} {txn['type']:<8} {txn['category']:<10} "
+            f"  {sign}₹{txn['amount']:>8,.0f}  {bar}{hv_flag}"
+        )
+
+
+# ════════════════════════════════════════════════════════════
+#  SUMMARY PRINTER
+# ════════════════════════════════════════════════════════════
+
+def print_summary(transactions: list) -> None:
+    """Calculate and display summary stats."""
+    if not transactions:
+        print("  No transactions to summarise.")
+        return
+
+    total_credit  = 0.0
+    total_debit   = 0.0
+    highest_amt   = 0.0
+    highest_txn   = None
+    category_spend = {cat: 0.0 for cat in VALID_CATEGORIES}
+
+    for txn in transactions:           # for loop: accumulate stats
+        if txn["type"] == "credit":
+            total_credit += txn["amount"]
+        else:
+            total_debit  += txn["amount"]
+            category_spend[txn["category"]] += txn["amount"]
+
+        if txn["amount"] > highest_amt:
+            highest_amt = txn["amount"]
+            highest_txn = txn
+
+    net_balance   = total_credit - total_debit
+    total_count   = len(transactions)
+    total_amount  = sum(t["amount"] for t in transactions)
+    avg_amount    = total_amount / total_count
+
+    print("\n  [ Summary ]")
+    print("  " + "─" * 40)
+    print(f"  Total transactions  : {total_count}")
+    print(f"  Total credits       : +₹{total_credit:>12,.2f}")
+    print(f"  Total debits        :  ₹{total_debit:>12,.2f}")
+    print(f"  Net balance         :  ₹{net_balance:>12,.2f}  "
+          f"{'▲ Surplus' if net_balance >= 0 else '▼ Deficit'}")
+    print(f"  Average transaction :  ₹{avg_amount:>12,.2f}")
+    print(f"  Highest transaction :  ₹{highest_amt:>12,.2f}"
+          f"  ({highest_txn['type']} · {highest_txn['category']})")
+
+    # BONUS: category breakdown
+    print("\n  [ Spending by Category (debits only) ]")
+    print("  " + "─" * 40)
+    for cat, spent in category_spend.items():   # for loop: dict items
+        if spent > 0:
+            bar = ""
+            for _ in range(max(1, int(spent // BAR_UNIT))):  # for loop
+                bar += "*"
+            print(f"  {cat:<10}  ₹{spent:>10,.2f}  {bar}")
+
+
+# ════════════════════════════════════════════════════════════
+#  MAIN
+# ════════════════════════════════════════════════════════════
+
+def main() -> None:
+    print("=" * 58)
+    print("   Paytm Daily Transaction Analyzer")
+    print("=" * 58)
+    print("  Enter transactions one by one.")
+    print("  Type 'done' when finished.\n")
+
+    transactions = []
+    txn_number   = 0
+
+    # ── while loop: keep accepting transactions until 'done' ─
+    while True:
+        raw = input(f"  Transaction {txn_number + 1} amount (or 'done'): ").strip()
+
+        # Exit condition
+        if raw.lower() == "done":
+            break                                    # break: exit while loop
+
+        # Validate amount
+        try:
+            amount = float(raw.replace(",", ""))
+            if amount <= 0:
+                print("  ✗ Amount must be positive.\n")
+                continue                             # continue: re-prompt
+        except ValueError:
+            print("  ✗ Enter a number or 'done'.\n")
+            continue                                 # continue: re-prompt
+
+        txn_type = get_choice("  Type (credit / debit): ", VALID_TYPES)
+        category = get_choice("  Category (food / travel / bills / other): ", VALID_CATEGORIES)
+
+        is_high_value = amount > HIGH_VALUE_THRESHOLD
+
+        txn = {
+            "id":         txn_number + 1,
+            "amount":     amount,
+            "type":       txn_type,
+            "category":   category,
+            "high_value": is_high_value,
+        }
+
+        transactions.append(txn)
+        txn_number += 1
+
+        # Flag high-value immediately
+        if is_high_value:
+            print(f"  ⚠  HIGH VALUE transaction flagged: ₹{amount:,.0f}\n")
+        else:
+            print(f"  ✓  Recorded.\n")
+
+    # ── Results ──────────────────────────────────────────────
+    if not transactions:
+        print("\n  No transactions entered. Exiting.")
+        return
+
+    print_bar_chart(transactions)
+    print_summary(transactions)
+    print()
+
+
+if __name__ == "__main__":
+    main()
