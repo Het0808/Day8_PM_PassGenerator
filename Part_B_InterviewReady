@@ -1,0 +1,234 @@
+# ============================================================
+#  Day-08 PM | PART B — Interview Ready
+#  Topics: break/continue, loop-else, O(n) vs O(n²), prime fix
+# ============================================================
+
+
+# ════════════════════════════════════════════════════════════
+#  Q1 — break vs continue  +  loop-else
+# ════════════════════════════════════════════════════════════
+
+print("=" * 55)
+print("Q1: break vs continue  +  loop-else")
+print("=" * 55)
+
+"""
+BREAK
+-----
+Immediately exits the entire loop.
+Remaining iterations are skipped.
+Use when: you found what you needed and further looping is pointless.
+
+CONTINUE
+--------
+Skips the REST of the current iteration only.
+The loop continues with the next item.
+Use when: you want to skip one item but keep looping.
+"""
+
+# -- break example --
+print("\n--- break: stop at first even number ---")
+numbers = [1, 3, 5, 4, 7, 9]
+for n in numbers:
+    if n % 2 == 0:
+        print(f"  Found even: {n} → breaking out")
+        break                       # exits the for loop entirely
+    print(f"  {n} is odd, checking next...")
+
+# -- continue example --
+print("\n--- continue: skip odd numbers, print evens ---")
+for n in range(1, 8):
+    if n % 2 != 0:
+        continue                    # skip this iteration, go to next n
+    print(f"  Even: {n}")
+
+"""
+LOOP-ELSE
+---------
+The `else` block on a for/while loop runs ONLY IF the loop
+completed without hitting a `break`.
+
+If break fired → else is SKIPPED.
+If loop ran to completion → else runs.
+
+Classic use case: search patterns
+  - If item found  → break (else skipped → "not found" message avoided)
+  - If item absent → loop finishes, else runs → "not found" message shown
+"""
+
+print("\n--- loop-else: search pattern ---")
+
+def search(items, target):
+    for item in items:
+        if item == target:
+            print(f"  Found '{target}' ✓")
+            break                   # found → else will NOT run
+    else:
+        # only runs if break was never hit
+        print(f"  '{target}' not found in list")
+
+search([10, 20, 30, 40], 30)   # → Found
+search([10, 20, 30, 40], 99)   # → Not found
+
+
+# ════════════════════════════════════════════════════════════
+#  Q2 — find_pairs: O(n²) then O(n)
+# ════════════════════════════════════════════════════════════
+
+print("\n" + "=" * 55)
+print("Q2: find_pairs — O(n²) → O(n)")
+print("=" * 55)
+
+
+# ── Approach 1: O(n²) nested loops ───────────────────────────
+
+def find_pairs_n2(numbers: list, target: int) -> list:
+    """
+    O(n²) — check every possible pair with nested loops.
+    Outer loop picks first element, inner loop picks second.
+    Avoid duplicates: inner loop starts at i+1.
+
+    Time  complexity: O(n²)  — two nested loops over n elements
+    Space complexity: O(k)   — k = number of valid pairs
+    """
+    pairs = []
+    for i in range(len(numbers)):           # outer loop: O(n)
+        for j in range(i + 1, len(numbers)):  # inner loop: O(n)
+            if numbers[i] + numbers[j] == target:
+                pairs.append((numbers[i], numbers[j]))
+    return pairs
+
+
+# ── Approach 2: O(n) using a set ─────────────────────────────
+
+def find_pairs_n1(numbers: list, target: int) -> list:
+    """
+    O(n) — for each number, check if its complement is in a set.
+    complement = target - current_number
+
+    Why O(n)?
+      Set lookup (`in`) is O(1) average.
+      We loop once → O(n) × O(1) = O(n) total.
+
+    Time  complexity: O(n)
+    Space complexity: O(n) — we store seen numbers in a set
+    """
+    seen  = set()
+    pairs = []
+    for num in numbers:                     # single loop: O(n)
+        complement = target - num
+        if complement in seen:              # set lookup: O(1)
+            pairs.append((complement, num))
+        seen.add(num)
+    return pairs
+
+
+# ── Test both ────────────────────────────────────────────────
+test_nums   = [1, 2, 3, 4, 5]
+test_target = 6
+
+r1 = find_pairs_n2(test_nums, test_target)
+r2 = find_pairs_n1(test_nums, test_target)
+
+print(f"\n  Input : {test_nums}, target = {test_target}")
+print(f"  O(n²) : {r1}")
+print(f"  O(n)  : {r2}")
+
+# More edge cases
+print(f"\n  find_pairs([1,1,1], 2)        O(n²): {find_pairs_n2([1,1,1], 2)}")
+print(f"  find_pairs([1,1,1], 2)        O(n) : {find_pairs_n1([1,1,1], 2)}")
+print(f"  find_pairs([], 5)             O(n²): {find_pairs_n2([], 5)}")
+print(f"  find_pairs([3], 6)            O(n²): {find_pairs_n2([3], 6)}")
+
+print("""
+COMPLEXITY EXPLAINED:
+  O(n²): for every element we scan all remaining elements.
+          With n=1000, that's ~500,000 comparisons.
+
+  O(n) : for every element we do ONE set lookup (O(1)).
+          With n=1000, that's exactly 1,000 operations.
+
+  Trade-off: O(n) uses extra memory (the `seen` set).
+             O(n²) uses no extra memory but is much slower.
+""")
+
+
+# ════════════════════════════════════════════════════════════
+#  Q3 — Debug is_prime
+# ════════════════════════════════════════════════════════════
+
+print("=" * 55)
+print("Q3: Debug is_prime")
+print("=" * 55)
+
+print("""
+ORIGINAL CODE:
+--------------
+  def is_prime(n):
+      if n < 2:
+          return False
+      for i in range(2, n):      ← BUG HERE
+          if n % i == 0:
+              return False
+      return True
+
+BUG 1 — PERFORMANCE (O(n) instead of O(√n)):
+  range(2, n) checks ALL numbers up to n-1.
+  We only need to check up to √n.
+  WHY: if n has a factor larger than √n, its paired factor
+       must be smaller than √n — so we'd have caught it already.
+  Fix: range(2, int(n**0.5) + 1)
+
+  Impact: for n=1,000,000 the buggy version does ~1,000,000
+  iterations; the fix does only ~1,000 iterations (1000× faster).
+
+BUG 2 — LOGIC (missing special cases):
+  n=1  → correctly returns False (n < 2 check handles it)
+  n=2  → range(2, 2) is EMPTY → loop never runs → returns True ✓
+  n=4  → range(2, 4) = [2,3] → 4%2==0 → False ✓  (works but slow)
+  The logic is not wrong, just wildly inefficient.
+
+NO BUG in the base case (n < 2 → False) — that's correct.
+""")
+
+
+# -- Buggy version (for demonstration) --
+def is_prime_buggy(n):
+    if n < 2:
+        return False
+    for i in range(2, n):          # O(n) — checks every number up to n
+        if n % i == 0:
+            return False
+    return True
+
+
+# -- Fixed version --
+def is_prime_fixed(n):
+    """
+    O(√n) primality check.
+    Only checks divisors up to √n — mathematically sufficient.
+    """
+    if n < 2:
+        return False
+    if n == 2:
+        return True                # 2 is the only even prime
+    if n % 2 == 0:
+        return False               # eliminate all even numbers early
+    i = 3
+    while i * i <= n:             # while loop: i goes up to √n only
+        if n % i == 0:
+            return False
+        i += 2                     # skip even divisors (already eliminated)
+    return True
+
+
+# -- Verify both give same answers --
+print("  Verification (buggy vs fixed):")
+test_values = [0, 1, 2, 3, 4, 13, 17, 25, 97, 100]
+print(f"  {'n':>5}  {'buggy':>8}  {'fixed':>8}  {'match':>6}")
+print("  " + "-" * 35)
+for n in test_values:
+    b = is_prime_buggy(n)
+    f = is_prime_fixed(n)
+    match = "✓" if b == f else "✗ MISMATCH"
+    print(f"  {n:>5}  {str(b):>8}  {str(f):>8}  {match:>6}")
